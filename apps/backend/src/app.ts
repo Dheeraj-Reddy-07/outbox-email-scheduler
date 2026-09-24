@@ -1,16 +1,19 @@
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
+import RedisStore from 'connect-redis';
 import passport from './config/passport.js';
 import prisma from './config/database.js';
+import { sessionRedis } from './config/redis.js';
 import authRoutes from './routes/auth.routes.js';
 import emailRoutes from './routes/email.routes.js';
 import campaignRoutes from './routes/campaign.routes.js';
 import { getQueueHealth, initializeQueue } from './queue/index.js';
 
-
-
 const app = express();
+
+// Trust Render's reverse proxy so req.secure = true and cookies work correctly
+app.set('trust proxy', 1);
 
 // Initialize queue
 initializeQueue().catch((err) => {
@@ -27,8 +30,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware (memory-based for now, switch to Redis when available)
+// Session middleware backed by Redis (persists across restarts)
 app.use(session({
+  store: new RedisStore({ client: sessionRedis }),
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
