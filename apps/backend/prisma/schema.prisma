@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  CANCELLED
+}
+
+enum EmailJobStatus {
+  PENDING
+  SCHEDULED
+  SENT
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  googleId  String   @unique
+  email     String   @unique
+  name      String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  campaigns Campaign[]
+
+  @@index([googleId])
+  @@index([email])
+}
+
+model Campaign {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  subject      String
+  body         String
+  startAt      DateTime
+  delaySeconds Int
+  hourlyLimit  Int
+  status       CampaignStatus @default(DRAFT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  emailJobs    EmailJob[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model EmailJob {
+  id             String        @id @default(cuid())
+  campaignId     String
+  campaign       Campaign      @relation(fields: [campaignId], references: [id])
+  recipientEmail String
+  status         EmailJobStatus @default(PENDING)
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  attempts       Int           @default(0)
+  lastError      String?
+  bullmqJobId    String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([bullmqJobId])
+}
