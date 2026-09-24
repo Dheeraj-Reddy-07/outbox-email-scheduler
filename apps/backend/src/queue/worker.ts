@@ -80,6 +80,14 @@ export const createEmailWorker = (concurrency: number = 5) => {
           });
         }
 
+        // Transition campaign to RUNNING if it is currently SCHEDULED
+        if (existingJob.campaign.status === 'SCHEDULED') {
+          await prisma.campaign.updateMany({
+            where: { id: campaignId, status: 'SCHEDULED' },
+            data: { status: 'RUNNING' },
+          });
+        }
+
         // Respect delay between individual emails
         if (existingJob.campaign.delaySeconds > 0) {
           const lastSentJob = await prisma.emailJob.findFirst({
@@ -121,6 +129,25 @@ export const createEmailWorker = (concurrency: number = 5) => {
           },
         });
 
+        // Check if all jobs are completed
+        const pendingJobs = await prisma.emailJob.count({
+          where: {
+            campaignId,
+            status: { in: [EmailJobStatus.PENDING, EmailJobStatus.SCHEDULED] },
+          },
+        });
+
+        if (pendingJobs === 0) {
+          await prisma.campaign.updateMany({
+            where: {
+              id: campaignId,
+              status: { notIn: ['COMPLETED', 'CANCELLED'] },
+            },
+            data: { status: 'COMPLETED' },
+          });
+          console.log(`Campaign ${campaignId} completed`);
+        }
+
         console.log(`Email sent successfully to ${recipientEmail}`);
         return { success: true, messageId: emailResult.messageId };
 
@@ -143,6 +170,26 @@ export const createEmailWorker = (concurrency: number = 5) => {
                 lastError: errorMessage,
               },
             });
+
+            // Check if all jobs are completed (even if failed)
+            const pendingJobs = await prisma.emailJob.count({
+              where: {
+                campaignId,
+                status: { in: [EmailJobStatus.PENDING, EmailJobStatus.SCHEDULED] },
+              },
+            });
+
+            if (pendingJobs === 0) {
+              await prisma.campaign.updateMany({
+                where: {
+                  id: campaignId,
+                  status: { notIn: ['COMPLETED', 'CANCELLED'] },
+                },
+                data: { status: 'COMPLETED' },
+              });
+              console.log(`Campaign ${campaignId} completed with failures`);
+            }
+
             // Don't retry - mark as permanently failed
             throw new Error(`Max retries exceeded for job ${emailJobId}`);
           }
