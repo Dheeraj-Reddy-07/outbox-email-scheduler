@@ -51,7 +51,10 @@ export default function ComposePage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    processFile(file);
+  };
 
+  const processFile = (file: File) => {
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -62,6 +65,32 @@ export default function ComposePage() {
       setFormData(prev => ({ ...prev, recipientEmails: valid }));
     };
     reader.readAsText(file);
+  };
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
+      showToast('Only CSV or TXT files are supported', 'error');
+      return;
+    }
+    processFile(file);
   };
 
   const handleManualInput = () => {
@@ -200,7 +229,12 @@ export default function ComposePage() {
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                     Upload CSV/TXT
                   </label>
-                  <div className="border border-dashed border-gray-300 dark:border-slate-700 rounded-md p-3 text-center hover:border-gray-400 dark:hover:border-slate-600 transition-colors">
+                  <div 
+                    className={`border ${isDragging ? 'border-solid border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-dashed border-gray-300 dark:border-slate-700'} rounded-md p-3 text-center hover:border-gray-400 dark:hover:border-slate-600 transition-colors`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     <input
                       type="file"
                       accept=".csv,.txt"
@@ -210,9 +244,9 @@ export default function ComposePage() {
                     />
                     <label
                       htmlFor="file-upload"
-                      className="cursor-pointer text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                      className="cursor-pointer text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 block w-full h-full"
                     >
-                      {fileName || 'Click to upload'}
+                      {fileName || (isDragging ? 'Drop file here' : 'Click or drag file to upload')}
                     </label>
                   </div>
                 </div>

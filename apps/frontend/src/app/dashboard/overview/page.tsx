@@ -84,7 +84,7 @@ export default function OverviewPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <StatCard
           title="Total Campaigns"
           value={stats.total}
@@ -108,89 +108,80 @@ export default function OverviewPage() {
       </div>
 
       {/* Activity Overview - Shared Container */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-4 mb-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Activity Overview</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-4 mb-4">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Activity Overview</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Email Activity */}
           <div>
-            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Email Activity</h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Scheduled</span>
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Campaign Status</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-md flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400">Scheduled</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{stats.scheduled}</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">{stats.scheduled}</span>
               </div>
-              <div className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Running</span>
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-md flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400">Running</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{stats.running}</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">{stats.running}</span>
               </div>
-              <div className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Completed</span>
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-md flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400">Completed</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{stats.completed}</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">{stats.completed}</span>
               </div>
-              <div className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Failed</span>
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-md flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400">Failed</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{stats.totalFailed}</span>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">{stats.totalFailed}</span>
               </div>
             </div>
           </div>
 
           {/* Delivery Pipeline */}
           <div>
-            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Delivery Pipeline</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Mail className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full transition-all"
-                      style={{ width: `${stats.total > 0 ? (stats.scheduled / stats.total) * 100 : 0}%` }}
-                    />
+            <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Delivery Pipeline</h4>
+            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-md p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-center flex-1">
+                  <div className="w-6 h-6 mx-auto bg-blue-100 dark:bg-blue-900/30 rounded flex items-center justify-center mb-1.5">
+                    <Calendar className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                   </div>
+                  <span className="text-xs font-semibold text-gray-900 dark:text-white block">{stats.scheduled}</span>
+                  <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Scheduled</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white w-8 text-right">{stats.scheduled}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <Send className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="h-px bg-gray-300 dark:bg-slate-700 w-full max-w-[30px]"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-slate-700 mx-0.5"></div>
+                  <div className="h-px bg-gray-300 dark:bg-slate-700 w-full max-w-[30px]"></div>
                 </div>
-                <div className="flex-1">
-                  <div className="h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-amber-500 rounded-full transition-all"
-                      style={{ width: `${stats.total > 0 ? (stats.running / stats.total) * 100 : 0}%` }}
-                    />
+                <div className="text-center flex-1">
+                  <div className="w-6 h-6 mx-auto bg-amber-100 dark:bg-amber-900/30 rounded flex items-center justify-center mb-1.5">
+                    <Send className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                   </div>
+                  <span className="text-xs font-semibold text-gray-900 dark:text-white block">{stats.running}</span>
+                  <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sending</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white w-8 text-right">{stats.running}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <AlertCircle className="w-3 h-3 text-green-600 dark:text-green-400" />
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="h-px bg-gray-300 dark:bg-slate-700 w-full max-w-[30px]"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-slate-700 mx-0.5"></div>
+                  <div className="h-px bg-gray-300 dark:bg-slate-700 w-full max-w-[30px]"></div>
                 </div>
-                <div className="flex-1">
-                  <div className="h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 rounded-full transition-all"
-                      style={{ width: `${stats.total > 0 ? (stats.completed / stats.total) * 100 : 0}%` }}
-                    />
+                <div className="text-center flex-1">
+                  <div className="w-6 h-6 mx-auto bg-green-100 dark:bg-green-900/30 rounded flex items-center justify-center mb-1.5">
+                    <AlertCircle className="w-3 h-3 text-green-600 dark:text-green-400" />
                   </div>
+                  <span className="text-xs font-semibold text-gray-900 dark:text-white block">{stats.completed}</span>
+                  <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Delivered</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white w-8 text-right">{stats.completed}</span>
               </div>
             </div>
           </div>
