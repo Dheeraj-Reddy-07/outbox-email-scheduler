@@ -117,7 +117,7 @@ export default function OverviewPage() {
 
             {/* Campaign Status — 7/12 cols (~58%) */}
             <div className="lg:col-span-7">
-              <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Campaign Status</p>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-3">Campaign Status</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { label: 'Scheduled', value: stats.scheduled, color: 'bg-blue-500' },
@@ -138,7 +138,7 @@ export default function OverviewPage() {
 
             {/* Delivery Pipeline — 5/12 cols (~42%) */}
             <div className="lg:col-span-5">
-              <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Delivery Pipeline</p>
+              <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-3">Delivery Pipeline</p>
               <div className="rounded-lg bg-gray-50 dark:bg-slate-800/60 border border-gray-100 dark:border-slate-800 px-4 py-4 flex items-center justify-between h-[calc(100%-28px)]">
                 {([
                   { label: 'Scheduled', value: stats.scheduled, Icon: Calendar, iconColor: 'text-blue-500 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
