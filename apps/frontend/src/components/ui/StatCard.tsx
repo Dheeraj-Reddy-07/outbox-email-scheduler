@@ -11,19 +11,21 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, icon: Icon, trend, className = '' }: StatCardProps) {
   return (
-    <div className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-4 shadow-sm h-[88px] flex items-center ${className}`}>
-      <div className="flex-1">
-        <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{title}</p>
-        <p className="text-2xl font-semibold text-gray-900 dark:text-white leading-none mt-1">{value}</p>
-        {trend && (
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{trend}</p>
+    <div className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-6 shadow-sm flex flex-col justify-between ${className}`}>
+      <div className="flex items-start justify-between mb-4">
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+        {Icon && (
+          <div className="p-2 bg-gray-50 dark:bg-slate-800 rounded-lg">
+            <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          </div>
         )}
       </div>
-      {Icon && (
-        <div className="ml-3 p-2 bg-gray-50 dark:bg-slate-800 rounded-md">
-          <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-        </div>
-      )}
+      <div>
+        <p className="text-3xl font-bold text-gray-900 dark:text-white leading-none">{value}</p>
+        {trend && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{trend}</p>
+        )}
+      </div>
     </div>
   );
 }
