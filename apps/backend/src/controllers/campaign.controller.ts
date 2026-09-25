@@ -21,6 +21,14 @@ export async function createCampaignController(req: Request, res: Response) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    if (subject.length > 255) {
+      return res.status(400).json({ error: 'Subject must be less than 255 characters' });
+    }
+
+    if (body.length > 10000) {
+      return res.status(400).json({ error: 'Body must be less than 10000 characters' });
+    }
+
     // Validate startAt is a valid date
     const startDate = new Date(startAt);
     if (isNaN(startDate.getTime())) {

@@ -206,11 +206,17 @@ export default function ComposePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Subject
-                </label>
+                <div className="flex justify-between items-end mb-1.5">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    Subject
+                  </label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {formData.subject.length}/255
+                  </span>
+                </div>
                 <input
                   type="text"
+                  maxLength={255}
                   value={formData.subject}
                   onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
                   placeholder="Campaign subject"
@@ -220,11 +226,17 @@ export default function ComposePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Email body
-                </label>
+                <div className="flex justify-between items-end mb-1.5">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    Email body
+                  </label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {formData.body.length}/10000
+                  </span>
+                </div>
                 <textarea
                   value={formData.body}
+                  maxLength={10000}
                   onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
                   rows={8}
                   placeholder="Write your email content here..."
