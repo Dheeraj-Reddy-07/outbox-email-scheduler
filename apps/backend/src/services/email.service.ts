@@ -7,6 +7,11 @@ export interface EmailOptions {
   html: string;
   text?: string;
   sender?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  }>;
 }
 
 export async function sendEmail(options: EmailOptions) {
@@ -17,17 +22,22 @@ export async function sendEmail(options: EmailOptions) {
                         options.sender === 'sender2' ? '"Sender 2" <sender2@outbox.com>' : 
                         '"Outbox Email Scheduler" <noreply@outbox.com>';
 
-    const info = await transporter.sendMail({
+    const mailOptions: any = {
       from: fromAddress,
       to: options.to,
       subject: options.subject,
       text: options.text || options.html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
       html: options.html,
-    });
+    };
+
+    if (options.attachments && options.attachments.length > 0) {
+      mailOptions.attachments = options.attachments;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
 
     console.log('Email sent successfully:', info.messageId);
     
-    // Get the URL for previewing the email in Ethereal
     const previewUrl = nodemailer.getTestMessageUrl(info);
     if (previewUrl) {
       console.log('Email preview URL:', previewUrl);

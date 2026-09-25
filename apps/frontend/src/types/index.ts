@@ -14,11 +14,13 @@ export interface Campaign {
   delaySeconds: number;
   hourlyLimit: number;
   status: 'DRAFT' | 'SCHEDULED' | 'RUNNING' | 'COMPLETED' | 'CANCELLED';
+  isStarred?: boolean;
   createdAt: string;
   updatedAt: string;
   recipientCount?: number;
   sentCount?: number;
   failedCount?: number;
+  attachmentCount?: number;
   senderEmail?: string;
 }
 
@@ -47,6 +49,14 @@ export interface CreateCampaignRequest {
   hourlyLimit: number;
   recipientEmails: string[];
   senderEmail?: string;
+  attachmentIds?: string[];
+}
+
+export interface Attachment {
+  id: string;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
 }
 
 export interface ParseRecipientsRequest {

@@ -25,7 +25,6 @@ export function useAuth() {
           setUser(null);
         }
       } catch (err) {
-        // Silent auth check failure - don't spam console
         setUser(null);
       } finally {
         setLoading(false);

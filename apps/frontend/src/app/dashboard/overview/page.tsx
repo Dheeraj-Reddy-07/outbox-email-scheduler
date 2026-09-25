@@ -6,15 +6,20 @@ import StatCard from '../../../components/ui/StatCard';
 import Badge from '../../../components/ui/Badge';
 import Skeleton from '../../../components/ui/Skeleton';
 import EmptyState from '../../../components/ui/EmptyState';
+import Button from '../../../components/ui/Button';
 import { Campaign } from '../../../types';
-import { Mail, Calendar, Send, AlertCircle, Users, TrendingUp } from 'lucide-react';
+import { Mail, Calendar, Send, AlertCircle, Users, TrendingUp, Trash2, Star } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
+import { useToast } from '../../../components/ui/Toast';
 
 export default function OverviewPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingStar, setTogglingStar] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCampaigns();
@@ -40,6 +45,60 @@ export default function OverviewPage() {
     }
   };
 
+  const handleDelete = async (campaignId: string) => {
+    if (!confirm('Are you sure you want to delete this campaign? This action cannot be undone.')) return;
+
+    setDeletingId(campaignId);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${campaignId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        showToast('Campaign deleted successfully', 'success');
+        setCampaigns(prev => prev.filter(c => c.id !== campaignId));
+      } else {
+        const data = await response.json();
+        showToast(data.error || 'Failed to delete campaign', 'error');
+      }
+    } catch (err) {
+      showToast('Network error occurred', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleToggleStar = async (campaignId: string) => {
+    setTogglingStar(campaignId);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${campaignId}/star`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCampaigns(prev => 
+          prev.map(c => 
+            c.id === campaignId 
+              ? { ...c, isStarred: data.isStarred }
+              : c
+          )
+        );
+        showToast(data.isStarred ? 'Campaign starred' : 'Campaign unstarred', 'success');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || 'Failed to toggle star', 'error');
+      }
+    } catch (err) {
+      console.error('Failed to toggle star:', err);
+      showToast('Network error occurred', 'error');
+    } finally {
+      setTogglingStar(null);
+    }
+  };
+
   const stats = {
     total: campaigns.length,
     scheduled: campaigns.filter(c => c.status === 'SCHEDULED').length,
@@ -51,7 +110,10 @@ export default function OverviewPage() {
   };
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    // Use Indian timezone for greeting
+    const indianTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const indianDate = new Date(indianTime);
+    const hour = indianDate.getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
@@ -197,6 +259,9 @@ export default function OverviewPage() {
                 <thead className="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-slate-800">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Star
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Subject
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -220,6 +285,18 @@ export default function OverviewPage() {
                   {campaigns.map((campaign) => (
                     <tr key={campaign.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleToggleStar(campaign.id)}
+                          disabled={togglingStar === campaign.id}
+                          className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={campaign.isStarred ? 'Unstar' : 'Star'}
+                        >
+                          <Star 
+                            className={`w-4 h-4 ${campaign.isStarred ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} ${togglingStar === campaign.id ? 'animate-spin' : ''}`} 
+                          />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{campaign.subject}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -234,15 +311,25 @@ export default function OverviewPage() {
                         {campaign.sentCount || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(campaign.createdAt).toLocaleDateString()}
+                        {new Date(campaign.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <a
-                          href={`/dashboard/campaigns/${campaign.id}`}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                        >
-                          View
-                        </a>
+                        <div className="flex items-center gap-3">
+                          <a
+                            href={`/dashboard/campaigns/${campaign.id}`}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                          >
+                            View
+                          </a>
+                          <button
+                            onClick={() => handleDelete(campaign.id)}
+                            disabled={deletingId === campaign.id}
+                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {deletingId === campaign.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -11,6 +11,7 @@ export interface CreateCampaignData {
   hourlyLimit: number;
   recipientEmails: string[];
   senderEmail?: string;
+  attachmentIds?: string[];
 }
 
 export interface CampaignWithJobs {
@@ -36,9 +37,8 @@ export interface CampaignWithJobs {
 }
 
 export async function createCampaign(data: CreateCampaignData): Promise<CampaignWithJobs> {
-  const { userId, subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails, senderEmail } = data;
+  const { userId, subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails, senderEmail, attachmentIds } = data;
 
-  // Validate input
   if (!subject || !body) {
     throw new Error('Subject and body are required');
   }
@@ -52,7 +52,6 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
     throw new Error('Hourly limit must be positive');
   }
 
-  // Remove duplicate emails and validate format
   const uniqueEmails = [...new Set(recipientEmails)];
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const validEmails = uniqueEmails.filter(email => emailRegex.test(email));
@@ -61,9 +60,7 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
     throw new Error('No valid email addresses provided');
   }
 
-  // Create campaign with email jobs in a transaction
   const campaign = await prisma.$transaction(async (tx) => {
-    // Create campaign
     const newCampaign = await tx.campaign.create({
       data: {
         userId,
@@ -77,7 +74,6 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
       },
     });
 
-    // Create email jobs for each recipient
     const emailJobs = await tx.emailJob.createMany({
       data: validEmails.map(email => ({
         campaignId: newCampaign.id,
@@ -86,11 +82,23 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
       })),
     });
 
-    // Fetch the complete campaign with jobs
+    if (attachmentIds && attachmentIds.length > 0) {
+      await tx.emailAttachment.updateMany({
+        where: {
+          id: { in: attachmentIds },
+          campaignId: null,
+        },
+        data: {
+          campaignId: newCampaign.id,
+        },
+      });
+    }
+
     const campaignWithJobs = await tx.campaign.findUnique({
       where: { id: newCampaign.id },
       include: {
         emailJobs: true,
+        attachments: true,
       },
     });
 
@@ -101,9 +109,7 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
     throw new Error('Failed to create campaign');
   }
 
-  // Add jobs to BullMQ queue with calculated delays
   const queueJobs = campaign.emailJobs.map((job, index) => {
-    // Calculate delay: startAt + (index * delaySeconds)
     const startTime = startAt.getTime();
     const currentTime = Date.now();
     const baseDelay = Math.max(0, startTime - currentTime);
@@ -117,6 +123,7 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
         subject: campaign.subject,
         body: campaign.body,
         userId: campaign.userId,
+        hasAttachments: campaign.attachments.length > 0,
       },
       options: {
         delay: staggeredDelay,
@@ -134,6 +141,7 @@ export async function getCampaignsByUserId(userId: string): Promise<CampaignWith
     where: { userId },
     include: {
       emailJobs: true,
+      attachments: true,
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -149,6 +157,7 @@ export async function getCampaignById(campaignId: string, userId: string): Promi
     },
     include: {
       emailJobs: true,
+      attachments: true,
     },
   });
 
@@ -182,18 +191,58 @@ export async function cancelCampaign(campaignId: string, userId: string): Promis
   }
 
   await prisma.$transaction([
-    // Update campaign status
     prisma.campaign.update({
       where: { id: campaignId },
       data: { status: CampaignStatus.CANCELLED },
     }),
-    // Cancel all pending email jobs
     prisma.emailJob.updateMany({
       where: {
         campaignId,
         status: { in: [EmailJobStatus.PENDING, EmailJobStatus.SCHEDULED] },
       },
       data: { status: EmailJobStatus.CANCELLED },
+    }),
+  ]);
+}
+
+export async function toggleCampaignStarred(campaignId: string, userId: string): Promise<boolean> {
+  const campaign = await prisma.campaign.findFirst({
+    where: {
+      id: campaignId,
+      userId,
+    },
+  });
+
+  if (!campaign) {
+    throw new Error('Campaign not found');
+  }
+
+  const updatedCampaign = await prisma.campaign.update({
+    where: { id: campaignId },
+    data: { isStarred: !campaign.isStarred },
+  });
+
+  return updatedCampaign.isStarred;
+}
+
+export async function deleteCampaign(campaignId: string, userId: string): Promise<void> {
+  const campaign = await prisma.campaign.findFirst({
+    where: {
+      id: campaignId,
+      userId,
+    },
+  });
+
+  if (!campaign) {
+    throw new Error('Campaign not found');
+  }
+
+  await prisma.$transaction([
+    prisma.emailJob.deleteMany({
+      where: { campaignId },
+    }),
+    prisma.campaign.delete({
+      where: { id: campaignId },
     }),
   ]);
 }

@@ -8,29 +8,25 @@ import { sessionRedis } from './config/redis.js';
 import authRoutes from './routes/auth.routes.js';
 import emailRoutes from './routes/email.routes.js';
 import campaignRoutes from './routes/campaign.routes.js';
+import attachmentRoutes from './routes/attachment.routes.js';
 import { getQueueHealth, initializeQueue } from './queue/index.js';
 
 const app = express();
 
-// Trust Render's reverse proxy so req.secure = true and cookies work correctly
 app.set('trust proxy', 1);
 
-// Initialize queue
 initializeQueue().catch((err) => {
   console.error('Queue initialization failed:', err.message);
 });
 
-// CORS middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
 }));
 
-// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware backed by Redis (persists across restarts)
 app.use(session({
   store: new RedisStore({ client: sessionRedis }),
   secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -39,20 +35,17 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 24 * 60 * 60 * 1000,
   },
 }));
 
-// Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
-
-
-// Routes
 app.use('/auth', authRoutes);
 app.use('/email', emailRoutes);
 app.use('/campaigns', campaignRoutes);
+app.use('/attachments', attachmentRoutes);
 
 app.get('/health', async (req, res) => {
   try {

@@ -4,6 +4,8 @@ import {
   getCampaignsByUserId,
   getCampaignById,
   cancelCampaign,
+  toggleCampaignStarred,
+  deleteCampaign,
 } from '../services/campaign.service.js';
 import { CampaignStatus } from '@prisma/client';
 
@@ -14,9 +16,8 @@ export async function createCampaignController(req: Request, res: Response) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails, senderEmail } = req.body;
+    const { subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails, senderEmail, attachmentIds } = req.body;
 
-    // Validate required fields
     if (!subject || !body || !startAt || delaySeconds === undefined || hourlyLimit === undefined || !recipientEmails) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -29,13 +30,11 @@ export async function createCampaignController(req: Request, res: Response) {
       return res.status(400).json({ error: 'Body must be less than 10000 characters' });
     }
 
-    // Validate startAt is a valid date
     const startDate = new Date(startAt);
     if (isNaN(startDate.getTime())) {
       return res.status(400).json({ error: 'Invalid startAt date' });
     }
 
-    // Validate recipientEmails is an array
     if (!Array.isArray(recipientEmails)) {
       return res.status(400).json({ error: 'recipientEmails must be an array' });
     }
@@ -49,6 +48,7 @@ export async function createCampaignController(req: Request, res: Response) {
       hourlyLimit: parseInt(hourlyLimit),
       recipientEmails,
       senderEmail,
+      attachmentIds,
     });
 
     res.status(201).json({
@@ -90,9 +90,11 @@ export async function getCampaignsController(req: Request, res: Response) {
         delaySeconds: campaign.delaySeconds,
         hourlyLimit: campaign.hourlyLimit,
         status: campaign.status,
+        isStarred: (campaign as any).isStarred || false,
         recipientCount: campaign.emailJobs.length,
         sentCount: campaign.emailJobs.filter(job => job.status === 'SENT').length,
         failedCount: campaign.emailJobs.filter(job => job.status === 'FAILED').length,
+        attachmentCount: (campaign as any).attachments?.length || 0,
         createdAt: campaign.createdAt,
         updatedAt: campaign.updatedAt,
       })),
@@ -126,6 +128,7 @@ export async function getCampaignByIdController(req: Request, res: Response) {
         delaySeconds: campaign.delaySeconds,
         hourlyLimit: campaign.hourlyLimit,
         status: campaign.status,
+        isStarred: (campaign as any).isStarred || false,
         emailJobs: campaign.emailJobs.map(job => ({
           id: job.id,
           recipientEmail: job.recipientEmail,
@@ -136,6 +139,12 @@ export async function getCampaignByIdController(req: Request, res: Response) {
           lastError: job.lastError,
           previewUrl: (job as any).previewUrl,
         })),
+        attachments: (campaign as any).attachments?.map((att: any) => ({
+          id: att.id,
+          originalFilename: att.originalFilename,
+          mimeType: att.mimeType,
+          sizeBytes: att.sizeBytes,
+        })) || [],
         createdAt: campaign.createdAt,
         updatedAt: campaign.updatedAt,
       },
@@ -166,6 +175,55 @@ export async function cancelCampaignController(req: Request, res: Response) {
     }
     if (errorMessage.includes('Cannot cancel')) {
       return res.status(400).json({ error: errorMessage });
+    }
+    
+    res.status(500).json({ error: errorMessage });
+  }
+}
+
+export async function deleteCampaignController(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    await deleteCampaign(id, userId);
+    res.json({ message: 'Campaign deleted successfully' });
+  } catch (error) {
+    console.error('Delete campaign error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete campaign';
+    
+    if (errorMessage.includes('not found')) {
+      return res.status(404).json({ error: errorMessage });
+    }
+    
+    res.status(500).json({ error: errorMessage });
+  }
+}
+
+export async function toggleCampaignStarredController(req: Request, res: Response) {
+  try {
+    const user = req.user as any;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = req.params;
+    const isStarred = await toggleCampaignStarred(id, user.id);
+
+    res.json({ 
+      message: 'Campaign starred status updated',
+      isStarred 
+    });
+  } catch (error) {
+    console.error('Toggle campaign starred error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update starred status';
+    
+    if (errorMessage.includes('not found')) {
+      return res.status(404).json({ error: errorMessage });
     }
     
     res.status(500).json({ error: errorMessage });

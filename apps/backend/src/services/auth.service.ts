@@ -14,7 +14,6 @@ export async function findOrCreateUser(profile: GoogleProfile): Promise<{ user: 
   const name = `${profile.name.givenName} ${profile.name.familyName}`;
   const avatarUrl = profile.photos?.[0]?.value;
 
-  // Try to find existing user by Google ID
   let user = await prisma.user.findUnique({
     where: { googleId },
   });
@@ -23,13 +22,11 @@ export async function findOrCreateUser(profile: GoogleProfile): Promise<{ user: 
     return { user, isNew: false };
   }
 
-  // Try to find existing user by email (in case they signed up with a different Google account)
   user = await prisma.user.findUnique({
     where: { email },
   });
 
   if (user) {
-    // Update existing user with new Google ID
     user = await prisma.user.update({
       where: { email },
       data: { googleId },
@@ -37,7 +34,6 @@ export async function findOrCreateUser(profile: GoogleProfile): Promise<{ user: 
     return { user, isNew: false };
   }
 
-  // Create new user
   user = await prisma.user.create({
     data: {
       googleId,

@@ -1,6 +1,5 @@
 import Redis from 'ioredis';
 
-// Main Redis client for BullMQ
 if (!process.env.REDIS_URL) {
   throw new Error('REDIS_URL environment variable is required. Please set your Upstash Redis connection string.');
 }
@@ -10,9 +9,9 @@ const redis = new Redis(process.env.REDIS_URL, {
   retryStrategy: (times) => {
     if (times > 3) {
       console.error('Redis connection failed after 3 retries');
-      return null; // Stop retrying
+      return null;
     }
-    return Math.min(times * 100, 3000); // Exponential backoff
+    return Math.min(times * 100, 3000);
   },
 });
 
@@ -24,7 +23,6 @@ redis.on('error', (err) => {
   console.error('Redis connection error:', err.message);
 });
 
-// Session Redis client
 const sessionRedis = new Redis(process.env.REDIS_URL, {
   retryStrategy: (times) => {
     if (times > 3) {
@@ -34,7 +32,6 @@ const sessionRedis = new Redis(process.env.REDIS_URL, {
   },
 });
 
-// Test connection - will throw if connection fails
 const redisConnectedPromise = redis.ping().then(() => {
   console.log('Redis ping successful');
 }).catch((err) => {

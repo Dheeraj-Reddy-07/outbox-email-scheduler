@@ -2,11 +2,14 @@ import { Worker, Job, DelayedError } from 'bullmq';
 import { redis } from '../config/redis.js';
 import { sendEmail } from '../services/email.service.js';
 import prisma from '../config/database.js';
-import { EmailJobData } from './queue.js';
+import { EmailJobData, emailQueue } from './queue.js';
 import { EmailJobStatus } from '@prisma/client';
+import { storageService } from '../config/storage.js';
 
 
 export const createEmailWorker = (concurrency: number = 5) => {
+  console.log(`Creating worker with concurrency ${concurrency}`);
+  
   const worker = new Worker<EmailJobData>(
     'email-queue',
     async (job: Job<EmailJobData>) => {
@@ -15,11 +18,14 @@ export const createEmailWorker = (concurrency: number = 5) => {
       console.log(`Processing email job ${emailJobId} for ${recipientEmail}`);
 
       try {
-        // Idempotency check: Get job with campaign for rate limiting info
         const existingJob = await prisma.emailJob.findUnique({
           where: { id: emailJobId },
           include: {
-            campaign: true,
+            campaign: {
+              include: {
+                attachments: true,
+              },
+            },
           },
         });
 
@@ -27,39 +33,33 @@ export const createEmailWorker = (concurrency: number = 5) => {
           throw new Error(`EmailJob ${emailJobId} not found`);
         }
 
-        // Skip if already sent or cancelled (idempotency)
         if (existingJob.status === EmailJobStatus.SENT || existingJob.status === EmailJobStatus.CANCELLED) {
           console.log(`EmailJob ${emailJobId} already ${existingJob.status}, skipping`);
           return { status: 'skipped', message: `Job already ${existingJob.status}` };
         }
 
-        // Rate limiting check based on campaign hourly limit
         const hourWindow = Math.floor(Date.now() / (60 * 60 * 1000));
         const rateKey = `rate:${campaignId}:${hourWindow}`;
         
         const count = await redis.incr(rateKey);
         if (count === 1) {
-          await redis.expire(rateKey, 3600 * 2); // 2 hours
+          await redis.expire(rateKey, 3600 * 2);
         }
 
         if (count > existingJob.campaign.hourlyLimit) {
-          // Revert the increment since we're not sending
           await redis.decr(rateKey);
           
           console.log(`Rate limit reached for campaign ${campaignId}. Rescheduling job...`);
           
-          // Delay until the start of the next hour window
           const nextHourStartMs = (hourWindow + 1) * 60 * 60 * 1000;
           const delayMs = nextHourStartMs - Date.now();
           
           if (delayMs > 0) {
-            // Reschedule job with delay
             await job.moveToDelayed(Date.now() + delayMs, job.token);
             throw new Error('Delayed');
           }
         }
 
-        // Update job status to SCHEDULED if not already
         if (existingJob.status === EmailJobStatus.PENDING) {
           await prisma.emailJob.update({
             where: { id: emailJobId },
@@ -71,7 +71,6 @@ export const createEmailWorker = (concurrency: number = 5) => {
           });
         }
 
-        // Transition campaign to RUNNING if it is currently SCHEDULED
         if (existingJob.campaign.status === 'SCHEDULED') {
           await prisma.campaign.updateMany({
             where: { id: campaignId, status: 'SCHEDULED' },
@@ -79,7 +78,6 @@ export const createEmailWorker = (concurrency: number = 5) => {
           });
         }
 
-        // Respect delay between individual emails
         if (existingJob.campaign.delaySeconds > 0) {
           const lastSentJob = await prisma.emailJob.findFirst({
             where: {
@@ -102,15 +100,32 @@ export const createEmailWorker = (concurrency: number = 5) => {
           }
         }
 
-        // Send the email
+        let attachments: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
+        if (existingJob.campaign.attachments && existingJob.campaign.attachments.length > 0) {
+          console.log(`Loading ${existingJob.campaign.attachments.length} attachments for campaign ${campaignId}`);
+          
+          for (const attachment of existingJob.campaign.attachments) {
+            try {
+              const fileBuffer = await storageService.getFile(attachment.storedFilename);
+              attachments.push({
+                filename: attachment.originalFilename,
+                content: fileBuffer,
+                contentType: attachment.mimeType,
+              });
+            } catch (error) {
+              console.error(`Failed to load attachment ${attachment.storedFilename}:`, error);
+            }
+          }
+        }
+
         const emailResult = await sendEmail({
           to: recipientEmail,
           subject,
           html: body,
           sender: existingJob.campaign.senderEmail || undefined,
+          attachments: attachments.length > 0 ? attachments : undefined,
         });
 
-        // Update job status to SENT
         await prisma.emailJob.update({
           where: { id: emailJobId },
           data: {
@@ -122,7 +137,6 @@ export const createEmailWorker = (concurrency: number = 5) => {
           },
         });
 
-        // Check if all jobs are completed
         const pendingJobs = await prisma.emailJob.count({
           where: {
             campaignId,
@@ -154,13 +168,11 @@ export const createEmailWorker = (concurrency: number = 5) => {
 
         console.error(`Failed to send email to ${recipientEmail}:`, errorMessage);
 
-        // Fetch job for error handling
         const currentJob = await prisma.emailJob.findUnique({
           where: { id: emailJobId },
         });
 
         if (currentJob) {
-          // Check if we've exceeded max attempts
           if (currentJob.attempts >= 3) {
             await prisma.emailJob.update({
               where: { id: emailJobId },
@@ -170,7 +182,6 @@ export const createEmailWorker = (concurrency: number = 5) => {
               },
             });
 
-            // Check if all jobs are completed (even if failed)
             const pendingJobs = await prisma.emailJob.count({
               where: {
                 campaignId,
@@ -189,11 +200,9 @@ export const createEmailWorker = (concurrency: number = 5) => {
               console.log(`Campaign ${campaignId} completed with failures`);
             }
 
-            // Don't retry - mark as permanently failed
             throw new Error(`Max retries exceeded for job ${emailJobId}`);
           }
 
-          // Update with error and increment attempts
           await prisma.emailJob.update({
             where: { id: emailJobId },
             data: {
@@ -204,14 +213,12 @@ export const createEmailWorker = (concurrency: number = 5) => {
           });
         }
 
-        // Re-throw error to trigger BullMQ retry
         throw error;
       }
     },
     {
       connection: redis,
       concurrency,
-      // Remove basic limiter since we're implementing custom rate limiting
     }
   );
 
@@ -226,6 +233,28 @@ export const createEmailWorker = (concurrency: number = 5) => {
   worker.on('error', (err) => {
     console.error('Worker error:', err);
   });
+
+  worker.on('delayed', (job) => {
+    console.log(`Job ${job.id} delayed`);
+  });
+  
+  worker.on('waiting', (job) => {
+    console.log(`Job ${job?.id} is waiting`);
+  });
+  
+  // Check for delayed jobs on startup and promote past-due ones
+  setTimeout(async () => {
+    try {
+      const delayedCount = await emailQueue.getDelayedCount();
+      if (delayedCount > 0) {
+        console.log(`Found ${delayedCount} delayed jobs, attempting to promote...`);
+        const promoted = await emailQueue.promoteJobs();
+        console.log(`Promoted ${promoted} jobs`);
+      }
+    } catch (error) {
+      console.error('Error promoting delayed jobs:', error);
+    }
+  }, 5000);
 
   return worker;
 };

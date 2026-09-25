@@ -7,7 +7,7 @@ import Badge from '../../../../components/ui/Badge';
 import Button from '../../../../components/ui/Button';
 import Skeleton from '../../../../components/ui/Skeleton';
 import { Campaign, EmailJob } from '../../../../types';
-import { ArrowLeft, Calendar, Clock, Zap, RefreshCw, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Zap, RefreshCw, FileText, AlertCircle, Star } from 'lucide-react';
 import { useToast } from '../../../../components/ui/Toast';
 
 interface CampaignDetail extends Campaign {
@@ -24,6 +24,7 @@ export default function CampaignDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [togglingStar, setTogglingStar] = useState(false);
 
   useEffect(() => {
     if (id) fetchCampaign();
@@ -69,6 +70,28 @@ export default function CampaignDetailPage() {
       showToast('Network error occurred', 'error');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleToggleStar = async () => {
+    setTogglingStar(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${id}/star`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        await fetchCampaign();
+        showToast(data.isStarred ? 'Campaign starred' : 'Campaign unstarred', 'success');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || 'Failed to toggle star', 'error');
+      }
+    } catch {
+      showToast('Network error occurred', 'error');
+    } finally {
+      setTogglingStar(false);
     }
   };
 
@@ -135,20 +158,32 @@ export default function CampaignDetailPage() {
                       {campaign.status}
                     </Badge>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(campaign.createdAt).toLocaleDateString()}
+                      {new Date(campaign.createdAt).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' })}
                     </span>
                   </div>
                 </div>
-                {(campaign.status === 'SCHEDULED' || campaign.status === 'RUNNING') && (
-                  <Button
-                    variant="danger"
-                    onClick={handleCancel}
-                    isLoading={cancelling}
-                    size="sm"
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleToggleStar}
+                    disabled={togglingStar}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={campaign.isStarred ? 'Unstar' : 'Star'}
                   >
-                    Cancel
-                  </Button>
-                )}
+                    <Star 
+                      className={`w-4 h-4 ${campaign.isStarred ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} ${togglingStar ? 'animate-spin' : ''}`} 
+                    />
+                  </button>
+                  {(campaign.status === 'SCHEDULED' || campaign.status === 'RUNNING') && (stats.pending > 0 || stats.scheduled > 0) && (
+                    <Button
+                      variant="danger"
+                      onClick={handleCancel}
+                      isLoading={cancelling}
+                      size="sm"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -192,9 +227,9 @@ export default function CampaignDetailPage() {
                   <div className="flex items-center gap-3">
                     <Calendar className="w-4 h-4 text-gray-400" />
                     <div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">Start Time</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">Start Time (IST)</p>
                       <p className="text-xs font-medium text-gray-900 dark:text-white">
-                        {new Date(campaign.startAt).toLocaleString()}
+                        {new Date(campaign.startAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })}
                       </p>
                     </div>
                   </div>
@@ -271,10 +306,10 @@ export default function CampaignDetailPage() {
                               </Badge>
                             </td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                              {job.scheduledAt ? new Date(job.scheduledAt).toLocaleString() : '—'}
+                              {job.scheduledAt ? new Date(job.scheduledAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }) : '—'}
                             </td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                              {job.sentAt ? new Date(job.sentAt).toLocaleString() : '—'}
+                              {job.sentAt ? new Date(job.sentAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }) : '—'}
                             </td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 text-center">
                               {job.attempts}

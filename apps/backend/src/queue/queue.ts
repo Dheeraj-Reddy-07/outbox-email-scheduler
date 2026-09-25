@@ -8,6 +8,7 @@ export interface EmailJobData {
   subject: string;
   body: string;
   userId: string;
+  hasAttachments?: boolean;
 }
 
 
@@ -20,11 +21,11 @@ export const emailQueue = new Queue<EmailJobData>('email-queue', {
       delay: 2000,
     },
     removeOnComplete: {
-      count: 1000, // Keep last 1000 completed jobs
-      age: 24 * 3600, // Keep for 24 hours
+      count: 1000,
+      age: 24 * 3600,
     },
     removeOnFail: {
-      count: 5000, // Keep last 5000 failed jobs
+      count: 5000,
     },
   },
 });
@@ -75,7 +76,7 @@ export async function getQueueHealth() {
 export async function addEmailJob(data: EmailJobData, options?: { delay?: number }) {
   const job = await emailQueue.add('send-email', data, {
     delay: options?.delay || 0,
-    jobId: data.emailJobId, // Use emailJobId as jobId for idempotency
+    jobId: data.emailJobId,
   });
 
   return job;

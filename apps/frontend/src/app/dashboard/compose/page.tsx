@@ -5,9 +5,10 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import Input from '../../../components/ui/Input';
 import Textarea from '../../../components/ui/Textarea';
 import Button from '../../../components/ui/Button';
-import { CreateCampaignRequest } from '../../../types';
+import RichTextEditor from '../../../components/ui/RichTextEditor';
+import { CreateCampaignRequest, Attachment } from '../../../types';
 import { useToast } from '../../../components/ui/Toast';
-import { Upload, FileText, Clock, Zap, Users, Calendar } from 'lucide-react';
+import { Upload, FileText, Clock, Zap, Users, Calendar, X, Paperclip } from 'lucide-react';
 
 export default function ComposePage() {
   const [formData, setFormData] = useState<CreateCampaignRequest>({
@@ -20,12 +21,20 @@ export default function ComposePage() {
     senderEmail: 'sender1',
   });
 
+  const [delayInput, setDelayInput] = useState('10');
+  const [hourlyLimitInput, setHourlyLimitInput] = useState('100');
+
   const [recipientInput, setRecipientInput] = useState('');
   const [fileName, setFileName] = useState('');
   const [parsedEmails, setParsedEmails] = useState<string[]>([]);
   const [invalidEmails, setInvalidEmails] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+
+  // Attachment state
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isDraggingAttachment, setIsDraggingAttachment] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   const parseEmails = (content: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -109,6 +118,136 @@ export default function ComposePage() {
     setFormData(prev => ({ ...prev, recipientEmails: [] }));
   };
 
+  // Attachment validation configuration
+  const ATTACHMENT_CONFIG = {
+    maxFiles: 10,
+    maxFileSize: 10 * 1024 * 1024, // 10 MB
+    maxTotalSize: 25 * 1024 * 1024, // 25 MB
+    allowedExtensions: ['.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.csv', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.webp'],
+    allowedMimeTypes: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+    ],
+  };
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const validateAttachment = (file: File): string | null => {
+    // Check file count
+    if (attachments.length >= ATTACHMENT_CONFIG.maxFiles) {
+      return `Maximum ${ATTACHMENT_CONFIG.maxFiles} files allowed`;
+    }
+
+    // Check file size
+    if (file.size > ATTACHMENT_CONFIG.maxFileSize) {
+      return `File size exceeds maximum of ${formatBytes(ATTACHMENT_CONFIG.maxFileSize)}`;
+    }
+
+    // Check total size
+    const currentTotalSize = attachments.reduce((sum, att) => sum + att.sizeBytes, 0);
+    if (currentTotalSize + file.size > ATTACHMENT_CONFIG.maxTotalSize) {
+      return `Total attachment size exceeds maximum of ${formatBytes(ATTACHMENT_CONFIG.maxTotalSize)}`;
+    }
+
+    // Check extension
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!ATTACHMENT_CONFIG.allowedExtensions.includes(ext)) {
+      return `File type ${ext} is not allowed`;
+    }
+
+    // Check MIME type
+    if (!ATTACHMENT_CONFIG.allowedMimeTypes.includes(file.type)) {
+      return `MIME type ${file.type} is not allowed`;
+    }
+
+    // Check for path traversal
+    if (file.name.includes('..') || file.name.includes('/') || file.name.includes('\\')) {
+      return 'Invalid filename';
+    }
+
+    return null;
+  };
+
+  const handleAttachmentUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setUploadingAttachment(true);
+
+    try {
+      const formData = new FormData();
+      const filesToUpload: File[] = [];
+
+      // Validate each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const error = validateAttachment(file);
+        
+        if (error) {
+          showToast(error, 'error');
+          setUploadingAttachment(false);
+          return;
+        }
+        
+        filesToUpload.push(file);
+        formData.append('attachments', file);
+      }
+
+      // Upload to server
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attachments`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAttachments(prev => [...prev, ...data.attachments]);
+        showToast(`${data.attachments.length} file(s) uploaded successfully`, 'success');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || 'Failed to upload attachments', 'error');
+      }
+    } catch (err) {
+      showToast('Network error occurred while uploading attachments', 'error');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const handleAttachmentDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingAttachment(false);
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleAttachmentUpload(files);
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== id));
+  };
+
+  const getTotalAttachmentSize = () => {
+    return attachments.reduce((sum, att) => sum + att.sizeBytes, 0);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -125,13 +264,18 @@ export default function ComposePage() {
     setLoading(true);
 
     try {
+      const payload = {
+        ...formData,
+        attachmentIds: attachments.map(att => att.id),
+      };
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -150,6 +294,7 @@ export default function ComposePage() {
         setFileName('');
         setParsedEmails([]);
         setInvalidEmails([]);
+        setAttachments([]);
       } else {
         const data = await response.json();
         showToast(data.error || 'Failed to create campaign', 'error');
@@ -161,10 +306,21 @@ export default function ComposePage() {
     }
   };
 
-  // Set default start time to 1 hour from now
+  // Set default start time to 1 hour from now in Indian timezone
   useEffect(() => {
-    const defaultStart = new Date(Date.now() + 60 * 60 * 1000);
-    setFormData(prev => ({ ...prev, startAt: defaultStart.toISOString().slice(0, 16) }));
+    const now = new Date();
+    // Get current time in Indian timezone
+    const indianTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    // Add 1 hour
+    indianTime.setHours(indianTime.getHours() + 1);
+    // Format for datetime-local input (ISO format)
+    const year = indianTime.getFullYear();
+    const month = String(indianTime.getMonth() + 1).padStart(2, '0');
+    const day = String(indianTime.getDate()).padStart(2, '0');
+    const hours = String(indianTime.getHours()).padStart(2, '0');
+    const minutes = String(indianTime.getMinutes()).padStart(2, '0');
+    const defaultStart = `${year}-${month}-${day}T${hours}:${minutes}`;
+    setFormData(prev => ({ ...prev, startAt: defaultStart }));
   }, []);
 
   // Calculate estimated completion time
@@ -180,6 +336,7 @@ export default function ComposePage() {
   };
 
   const estimatedTime = calculateEstimatedTime();
+  
   const isValid = formData.subject && formData.body && parsedEmails.length > 0 && formData.startAt;
 
   return (
@@ -230,20 +387,93 @@ export default function ComposePage() {
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
                     Email body
                   </label>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {formData.body.length}/10000
-                  </span>
                 </div>
-                <textarea
+                <RichTextEditor
                   value={formData.body}
+                  onChange={(value) => setFormData(prev => ({ ...prev, body: value }))}
                   maxLength={10000}
-                  onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
-                  rows={8}
                   placeholder="Write your email content here..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none leading-relaxed"
-                  required
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Attachments */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-md p-5">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Attachments</h3>
+            
+            <div className="space-y-4">
+              {/* Drop zone */}
+              <div 
+                className={`border ${isDraggingAttachment ? 'border-solid border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-dashed border-gray-300 dark:border-slate-700'} rounded-md p-4 text-center hover:border-gray-400 dark:hover:border-slate-600 transition-colors`}
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingAttachment(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsDraggingAttachment(false); }}
+                onDrop={handleAttachmentDrop}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv,.ppt,.pptx,.png,.jpg,.jpeg,.webp"
+                  onChange={(e) => handleAttachmentUpload(e.target.files)}
+                  className="hidden"
+                  id="attachment-upload"
+                  disabled={uploadingAttachment || attachments.length >= ATTACHMENT_CONFIG.maxFiles}
+                />
+                <label
+                  htmlFor="attachment-upload"
+                  className={`cursor-pointer ${uploadingAttachment || attachments.length >= ATTACHMENT_CONFIG.maxFiles ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <Paperclip className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {uploadingAttachment ? 'Uploading...' : isDraggingAttachment ? 'Drop files here' : 'Click or drag files to attach'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    Max {ATTACHMENT_CONFIG.maxFiles} files, {formatBytes(ATTACHMENT_CONFIG.maxFileSize)} each, {formatBytes(ATTACHMENT_CONFIG.maxTotalSize)} total
+                  </p>
+                </label>
+              </div>
+
+              {/* Attachment list */}
+              {attachments.length > 0 && (
+                <div className="space-y-2">
+                  {attachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
+                            {attachment.originalFilename}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatBytes(attachment.sizeBytes)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0"
+                        title="Remove attachment"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Total size indicator */}
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-slate-700">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Total: {attachments.length} file(s)
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatBytes(getTotalAttachmentSize())} / {formatBytes(ATTACHMENT_CONFIG.maxTotalSize)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -361,7 +591,7 @@ export default function ComposePage() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Start time
+                  Start time (Indian Standard Time)
                 </label>
                 <input
                   type="datetime-local"
@@ -370,6 +600,9 @@ export default function ComposePage() {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   required
                 />
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                  {formData.startAt && `Scheduled for: ${new Date(formData.startAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })} IST`}
+                </p>
               </div>
 
               <div>
@@ -379,8 +612,21 @@ export default function ComposePage() {
                 <input
                   type="number"
                   min="0"
-                  value={formData.delaySeconds}
-                  onChange={(e) => setFormData(prev => ({ ...prev, delaySeconds: parseInt(e.target.value) || 0 }))}
+                  step="1"
+                  value={delayInput}
+                  onChange={(e) => {
+                    setDelayInput(e.target.value);
+                    const numValue = parseInt(e.target.value);
+                    if (!isNaN(numValue) && numValue >= 0) {
+                      setFormData(prev => ({ ...prev, delaySeconds: numValue }));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (delayInput === '' || isNaN(parseInt(delayInput))) {
+                      setDelayInput('10');
+                      setFormData(prev => ({ ...prev, delaySeconds: 10 }));
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
@@ -392,8 +638,21 @@ export default function ComposePage() {
                 <input
                   type="number"
                   min="1"
-                  value={formData.hourlyLimit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, hourlyLimit: parseInt(e.target.value) || 1 }))}
+                  step="1"
+                  value={hourlyLimitInput}
+                  onChange={(e) => {
+                    setHourlyLimitInput(e.target.value);
+                    const numValue = parseInt(e.target.value);
+                    if (!isNaN(numValue) && numValue >= 1) {
+                      setFormData(prev => ({ ...prev, hourlyLimit: numValue }));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (hourlyLimitInput === '' || isNaN(parseInt(hourlyLimitInput))) {
+                      setHourlyLimitInput('100');
+                      setFormData(prev => ({ ...prev, hourlyLimit: 100 }));
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>

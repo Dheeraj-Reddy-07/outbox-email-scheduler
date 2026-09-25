@@ -38,22 +38,25 @@ model User {
 }
 
 model Campaign {
-  id           String        @id @default(cuid())
+  id           String            @id @default(cuid())
   userId       String
-  user         User          @relation(fields: [userId], references: [id])
+  user         User              @relation(fields: [userId], references: [id])
   subject      String
   body         String
   startAt      DateTime
   delaySeconds Int
   hourlyLimit  Int
   senderEmail  String?
-  status       CampaignStatus @default(DRAFT)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  status       CampaignStatus    @default(DRAFT)
+  isStarred    Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   emailJobs    EmailJob[]
+  attachments  EmailAttachment[]
 
   @@index([userId])
   @@index([status])
+  @@index([isStarred])
 }
 
 model EmailJob {
@@ -75,4 +78,17 @@ model EmailJob {
   @@index([status])
   @@index([scheduledAt])
   @@index([bullmqJobId])
+}
+
+model EmailAttachment {
+  id               String   @id @default(cuid())
+  campaignId       String?
+  campaign         Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  originalFilename String
+  storedFilename   String
+  mimeType         String
+  sizeBytes        Int
+  createdAt        DateTime @default(now())
+
+  @@index([campaignId])
 }
