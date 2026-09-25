@@ -33,7 +33,7 @@ export default function CampaignDetailPage() {
   const fetchCampaign = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${id}`, {
+      const response = await fetch(`/campaigns/${id}`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -55,7 +55,7 @@ export default function CampaignDetailPage() {
     if (!confirm('Are you sure you want to cancel this campaign?')) return;
     setCancelling(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${id}/cancel`, {
+      const response = await fetch(`/campaigns/${id}/cancel`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -76,7 +76,7 @@ export default function CampaignDetailPage() {
   const handleToggleStar = async () => {
     setTogglingStar(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${id}/star`, {
+      const response = await fetch(`/campaigns/${id}/star`, {
         method: 'PATCH',
         credentials: 'include',
       });

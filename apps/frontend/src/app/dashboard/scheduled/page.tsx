@@ -45,7 +45,7 @@ export default function ScheduledPage() {
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns`, {
+      const response = await fetch(`/campaigns`, {
         credentials: 'include',
       });
 
@@ -68,7 +68,7 @@ export default function ScheduledPage() {
   const toggleStar = async (campaignId: string) => {
     setTogglingStar(campaignId);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${campaignId}/star`, {
+      const response = await fetch(`/campaigns/${campaignId}/star`, {
         method: 'PATCH',
         credentials: 'include',
       });

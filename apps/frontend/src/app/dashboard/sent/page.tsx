@@ -35,7 +35,7 @@ export default function SentPage() {
   const fetchSentEmails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/email/sent`, {
+      const response = await fetch(`/email/sent`, {
         credentials: 'include',
       });
 

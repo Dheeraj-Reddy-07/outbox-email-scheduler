@@ -28,7 +28,7 @@ export default function OverviewPage() {
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns`, {
+      const response = await fetch(`/campaigns`, {
         credentials: 'include',
       });
 
@@ -50,7 +50,7 @@ export default function OverviewPage() {
 
     setDeletingId(campaignId);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${campaignId}`, {
+      const response = await fetch(`/campaigns/${campaignId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -72,7 +72,7 @@ export default function OverviewPage() {
   const handleToggleStar = async (campaignId: string) => {
     setTogglingStar(campaignId);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns/${campaignId}/star`, {
+      const response = await fetch(`/campaigns/${campaignId}/star`, {
         method: 'PATCH',
         credentials: 'include',
       });

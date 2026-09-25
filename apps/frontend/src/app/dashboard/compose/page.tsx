@@ -209,7 +209,7 @@ export default function ComposePage() {
       }
 
       // Upload to server
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attachments`, {
+      const response = await fetch(`/attachments`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -269,7 +269,7 @@ export default function ComposePage() {
         attachmentIds: attachments.map(att => att.id),
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/campaigns`, {
+      const response = await fetch(`/campaigns`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

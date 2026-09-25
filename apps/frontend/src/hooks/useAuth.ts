@@ -15,7 +15,7 @@ export function useAuth() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        const response = await fetch(`/auth/me`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -36,7 +36,7 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+      await fetch(`/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

@@ -4,7 +4,7 @@ import { Mail } from 'lucide-react';
 
 export default function LoginPage() {
   const handleGoogleLogin = () => {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
+    window.location.href = `/auth/google`;
   };
 
   return (
