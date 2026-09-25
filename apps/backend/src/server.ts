@@ -2,7 +2,8 @@ import 'dotenv/config';
 import app from './app.js';
 import { createEmailWorker } from './queue/worker.js';
 
-const PORT = process.env.PORT || 3001;
+// Force internal port 3001 so it doesn't conflict with Next.js using Render's PORT
+const PORT = process.env.BACKEND_PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
