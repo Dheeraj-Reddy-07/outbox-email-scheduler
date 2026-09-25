@@ -264,8 +264,15 @@ export default function ComposePage() {
     setLoading(true);
 
     try {
+      let formattedStartAt = formData.startAt;
+      if (formattedStartAt && !formattedStartAt.includes('+') && !formattedStartAt.includes('Z')) {
+        // datetime-local returns YYYY-MM-DDThh:mm, append seconds and IST offset
+        formattedStartAt = `${formattedStartAt}:00+05:30`;
+      }
+
       const payload = {
         ...formData,
+        startAt: formattedStartAt,
         attachmentIds: attachments.map(att => att.id),
       };
 
