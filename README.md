@@ -70,7 +70,7 @@ PostgreSQL                       <-- job marked SENT, campaign marked COMPLETED
 
 **Redis** stores only BullMQ queue state: delayed job timers, active job locks, retry counters.
 
-The rate limiting logic queries PostgreSQL (not Redis) to count how many emails were sent in the last hour for a given campaign.
+The rate limiting logic queries PostgreSQL to count how many emails were sent in the last hour for a given campaign.
 
 ---
 
@@ -98,7 +98,7 @@ The rate limiting logic queries PostgreSQL (not Redis) to count how many emails 
 
 **Per-email delay (`delaySeconds`):** Before sending, the worker queries the most recently sent job for the campaign. If `timeSinceLastSend < delaySeconds * 1000`, the job is moved back to delayed state for the remaining duration. This is enforced at processing time, not at job creation.
 
-**Hourly rate limit (`hourlyLimit`):** Before sending, the worker counts `EmailJob` rows for the campaign with `status = SENT` and `sentAt >= now - 1 hour`. If `count >= hourlyLimit`, the job is moved back to delayed state until the oldest job in that window ages out of the hour. Rate limit state is stored in PostgreSQL, not Redis.
+**Hourly rate limit (`hourlyLimit`):** Before sending, the worker atomically increments a Redis counter representing the current hour window (`rate:{campaignId}:{hour}`). If the count exceeds the hourly limit, the job is moved back to the delayed state until the next hour begins. The Redis keys automatically expire to prevent memory bloat.
 
 **When the limit is hit:** Jobs are rescheduled with `job.moveToDelayed(...)`. They are not dropped or failed.
 
@@ -360,14 +360,6 @@ There are no automated tests. The following scenarios have been verified manuall
 - CSV import: comma/newline-separated emails parsed and validated in browser before submission
 - Dashboard consistency: Scheduled page clears after completion; Sent page shows delivered jobs
 
-Utility scripts available in `apps/backend/src/scripts/`:
-
-```bash
-npm run test:db       # Check database connectivity
-npm run test:email    # Send a test email via Ethereal
-npm run check:jobs    # Print current email job statuses
-```
-
 ---
 
 ## Deployment
@@ -390,7 +382,7 @@ The API and worker must share the same `DATABASE_URL` and `REDIS_URL`. If the wo
 
 **BullMQ over cron:** Delayed BullMQ jobs give per-job scheduling resolution, native retry, failure tracking, and Redis-backed persistence without any timer management in application code.
 
-**PostgreSQL for rate limiting counters:** The hourly limit check queries PostgreSQL rather than a Redis atomic counter. This is simpler and uses the same data already in the database. Under high concurrency (more than 5 concurrent workers), two jobs could both pass the count check before either updates the database, allowing a slight overshoot of the hourly limit. With concurrency set to 5, this window is small in practice.
+**Redis atomic rate limiting:** The hourly limit check uses a Redis atomic counter (`redis.incr`) instead of counting PostgreSQL rows. This prevents race conditions under high concurrency and scales horizontally.
 
 **Session store:** Sessions are stored in Redis using `connect-redis`. The same Upstash Redis instance is used for both BullMQ queue state and session persistence, ensuring sessions survive server restarts.
 

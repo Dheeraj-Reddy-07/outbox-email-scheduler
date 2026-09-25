@@ -9,11 +9,7 @@
     "worker": "tsx src/worker.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "test:db": "tsx src/scripts/test-db.ts",
-    "test:email": "tsx src/scripts/test-email.ts",
-    "test:worker": "tsx src/scripts/test-worker-simulation.ts",
-    "check:jobs": "tsx src/scripts/check-email-jobs.ts"
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
