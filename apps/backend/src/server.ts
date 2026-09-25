@@ -9,8 +9,22 @@ app.listen(PORT, () => {
   
   // Start BullMQ email worker alongside backend server
   try {
-    createEmailWorker(5);
-    console.log('BullMQ worker process initialized and listening for jobs...');
+    const concurrency = parseInt(process.env.WORKER_CONCURRENCY || '5', 10);
+    const worker = createEmailWorker(concurrency);
+    console.log(`BullMQ worker process initialized with concurrency ${concurrency} and listening for jobs...`);
+
+    // Graceful shutdown
+    process.on('SIGTERM', async () => {
+      console.log('SIGTERM received, closing worker...');
+      await worker.close();
+      process.exit(0);
+    });
+
+    process.on('SIGINT', async () => {
+      console.log('SIGINT received, closing worker...');
+      await worker.close();
+      process.exit(0);
+    });
   } catch (err) {
     console.error('Failed to start BullMQ worker:', err);
   }

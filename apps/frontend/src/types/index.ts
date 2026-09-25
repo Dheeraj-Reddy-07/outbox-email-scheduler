@@ -19,6 +19,7 @@ export interface Campaign {
   recipientCount?: number;
   sentCount?: number;
   failedCount?: number;
+  senderEmail?: string;
 }
 
 export interface EmailJob {
@@ -32,6 +33,7 @@ export interface EmailJob {
   lastError?: string;
   createdAt: string;
   updatedAt: string;
+  previewUrl?: string;
   campaign?: {
     subject: string;
   };
@@ -44,6 +46,7 @@ export interface CreateCampaignRequest {
   delaySeconds: number;
   hourlyLimit: number;
   recipientEmails: string[];
+  senderEmail?: string;
 }
 
 export interface ParseRecipientsRequest {

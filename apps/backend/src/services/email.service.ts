@@ -6,14 +6,19 @@ export interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  sender?: string;
 }
 
 export async function sendEmail(options: EmailOptions) {
   try {
-    const transporter = await getEmailTransporter();
+    const transporter = await getEmailTransporter(options.sender);
     
+    const fromAddress = options.sender === 'sender1' ? '"Sender 1" <sender1@outbox.com>' : 
+                        options.sender === 'sender2' ? '"Sender 2" <sender2@outbox.com>' : 
+                        '"Outbox Email Scheduler" <noreply@outbox.com>';
+
     const info = await transporter.sendMail({
-      from: '"Outbox Email Scheduler" <noreply@outbox.com>',
+      from: fromAddress,
       to: options.to,
       subject: options.subject,
       text: options.text || options.html.replace(/<[^>]*>/g, ''), // Strip HTML for text version

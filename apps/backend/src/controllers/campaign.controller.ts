@@ -14,7 +14,7 @@ export async function createCampaignController(req: Request, res: Response) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails } = req.body;
+    const { subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails, senderEmail } = req.body;
 
     // Validate required fields
     if (!subject || !body || !startAt || delaySeconds === undefined || hourlyLimit === undefined || !recipientEmails) {
@@ -40,6 +40,7 @@ export async function createCampaignController(req: Request, res: Response) {
       delaySeconds: parseInt(delaySeconds),
       hourlyLimit: parseInt(hourlyLimit),
       recipientEmails,
+      senderEmail,
     });
 
     res.status(201).json({
@@ -51,6 +52,7 @@ export async function createCampaignController(req: Request, res: Response) {
         startAt: campaign.startAt,
         delaySeconds: campaign.delaySeconds,
         hourlyLimit: campaign.hourlyLimit,
+        senderEmail: (campaign as any).senderEmail,
         status: campaign.status,
         recipientCount: campaign.emailJobs.length,
         createdAt: campaign.createdAt,
@@ -124,6 +126,7 @@ export async function getCampaignByIdController(req: Request, res: Response) {
           sentAt: job.sentAt,
           attempts: job.attempts,
           lastError: job.lastError,
+          previewUrl: (job as any).previewUrl,
         })),
         createdAt: campaign.createdAt,
         updatedAt: campaign.updatedAt,

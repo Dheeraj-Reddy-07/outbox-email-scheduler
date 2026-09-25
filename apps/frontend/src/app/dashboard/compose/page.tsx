@@ -17,6 +17,7 @@ export default function ComposePage() {
     delaySeconds: 10,
     hourlyLimit: 100,
     recipientEmails: [],
+    senderEmail: 'sender1',
   });
 
   const [recipientInput, setRecipientInput] = useState('');
@@ -143,6 +144,7 @@ export default function ComposePage() {
           delaySeconds: 10,
           hourlyLimit: 100,
           recipientEmails: [],
+          senderEmail: 'sender1',
         });
         setRecipientInput('');
         setFileName('');
@@ -189,6 +191,20 @@ export default function ComposePage() {
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Campaign Details</h3>
             
             <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Sender
+                </label>
+                <select
+                  value={formData.senderEmail || 'sender1'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, senderEmail: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="sender1">Sender 1 (sender1@outbox.com)</option>
+                  <option value="sender2">Sender 2 (sender2@outbox.com)</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Subject

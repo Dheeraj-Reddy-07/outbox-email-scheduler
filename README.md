@@ -392,7 +392,7 @@ The API and worker must share the same `DATABASE_URL` and `REDIS_URL`. If the wo
 
 **PostgreSQL for rate limiting counters:** The hourly limit check queries PostgreSQL rather than a Redis atomic counter. This is simpler and uses the same data already in the database. Under high concurrency (more than 5 concurrent workers), two jobs could both pass the count check before either updates the database, allowing a slight overshoot of the hourly limit. With concurrency set to 5, this window is small in practice.
 
-**Session store:** Sessions use the default in-memory store (`express-session`). This means sessions are lost on server restart and the approach does not scale horizontally. For production, this would need to be replaced with a Redis or PostgreSQL session store.
+**Session store:** Sessions are stored in Redis using `connect-redis`. The same Upstash Redis instance is used for both BullMQ queue state and session persistence, ensuring sessions survive server restarts.
 
 **Ethereal SMTP:** All email delivery goes to Ethereal. No real emails are sent. Preview URLs are logged to the server console.
 

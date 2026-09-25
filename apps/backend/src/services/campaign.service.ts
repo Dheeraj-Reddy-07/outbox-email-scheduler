@@ -10,6 +10,7 @@ export interface CreateCampaignData {
   delaySeconds: number;
   hourlyLimit: number;
   recipientEmails: string[];
+  senderEmail?: string;
 }
 
 export interface CampaignWithJobs {
@@ -35,7 +36,7 @@ export interface CampaignWithJobs {
 }
 
 export async function createCampaign(data: CreateCampaignData): Promise<CampaignWithJobs> {
-  const { userId, subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails } = data;
+  const { userId, subject, body, startAt, delaySeconds, hourlyLimit, recipientEmails, senderEmail } = data;
 
   // Validate input
   if (!subject || !body) {
@@ -71,6 +72,7 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
         startAt,
         delaySeconds,
         hourlyLimit,
+        senderEmail,
         status: CampaignStatus.SCHEDULED,
       },
     });
@@ -98,12 +100,6 @@ export async function createCampaign(data: CreateCampaignData): Promise<Campaign
   if (!campaign) {
     throw new Error('Failed to create campaign');
   }
-
-  // Update campaign status to SCHEDULED
-  await prisma.campaign.update({
-    where: { id: campaign.id },
-    data: { status: CampaignStatus.SCHEDULED },
-  });
 
   // Add jobs to BullMQ queue with calculated delays
   const queueJobs = campaign.emailJobs.map((job, index) => {

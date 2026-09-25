@@ -1,43 +1,49 @@
 import nodemailer from 'nodemailer';
 
-// Create Ethereal SMTP transporter
-let transporter: nodemailer.Transporter | null = null;
+const transporters: Record<string, nodemailer.Transporter> = {};
 
-export async function getEmailTransporter() {
-  if (transporter) {
-    return transporter;
+export async function getEmailTransporter(senderKey?: string) {
+  const key = senderKey || 'default';
+
+  if (transporters[key]) {
+    return transporters[key];
+  }
+
+  let user = process.env.ETHEREAL_USER;
+  let pass = process.env.ETHEREAL_PASSWORD;
+
+  if (key === 'sender1' && process.env.SENDER_1_USER) {
+    user = process.env.SENDER_1_USER;
+    pass = process.env.SENDER_1_PASS;
+  } else if (key === 'sender2' && process.env.SENDER_2_USER) {
+    user = process.env.SENDER_2_USER;
+    pass = process.env.SENDER_2_PASS;
   }
 
   // If Ethereal credentials are not set, create a test account
-  if (!process.env.ETHEREAL_USER || process.env.ETHEREAL_USER === 'dummy') {
-    console.log('Creating Ethereal test account...');
+  if (!user || user === 'dummy') {
+    console.log(`Creating Ethereal test account for ${key}...`);
     const testAccount = await nodemailer.createTestAccount();
     
-    // Update environment with the test account credentials
-    process.env.ETHEREAL_USER = testAccount.user;
-    process.env.ETHEREAL_PASSWORD = testAccount.pass;
+    user = testAccount.user;
+    pass = testAccount.pass;
     
-    console.log('Ethereal test account created:');
-    console.log('  User:', testAccount.user);
-    console.log('  Pass:', testAccount.pass);
+    console.log(`Ethereal test account created for ${key}:`);
+    console.log('  User:', user);
+    console.log('  Pass:', pass);
     console.log('  SMTP:', testAccount.smtp.host);
-    console.log('  Web preview URL:', nodemailer.getTestMessageUrl({} as any));
   }
 
-  transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     host: process.env.ETHEREAL_HOST || 'smtp.ethereal.email',
     port: parseInt(process.env.ETHEREAL_PORT || '587'),
     secure: false, // true for 465, false for other ports
     auth: {
-      user: process.env.ETHEREAL_USER,
-      pass: process.env.ETHEREAL_PASSWORD,
+      user: user,
+      pass: pass,
     },
   });
 
+  transporters[key] = transporter;
   return transporter;
-}
-
-export async function getTestAccountUrl() {
-  const testAccount = await nodemailer.createTestAccount();
-  return nodemailer.getTestMessageUrl({} as any);
 }

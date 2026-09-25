@@ -243,53 +243,71 @@ export default function CampaignDetailPage() {
                 <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-xs">
                   No email jobs found for this campaign.
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-slate-800">
-                      <tr>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recipient</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Scheduled</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sent</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Attempts</th>
-                        <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Error</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
-                      {campaign.emailJobs.map((job) => (
-                        <tr key={job.id} className="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-                          <td className="px-4 py-2.5 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-white">
-                            {job.recipientEmail}
-                          </td>
-                          <td className="px-4 py-2.5 whitespace-nowrap">
-                            <Badge variant={job.status.toLowerCase() as any}>
-                              {job.status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                            {job.scheduledAt ? new Date(job.scheduledAt).toLocaleString() : '—'}
-                          </td>
-                          <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                            {job.sentAt ? new Date(job.sentAt).toLocaleString() : '—'}
-                          </td>
-                          <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 text-center">
-                            {job.attempts}
-                          </td>
-                          <td className="px-4 py-2.5 text-xs text-red-600 dark:text-red-400 max-w-xs truncate">
-                            {job.lastError ? (
-                              <div className="flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">{job.lastError}</span>
-                              </div>
-                            ) : '—'}
-                          </td>
+              ) : (() => {
+                const hasErrors = campaign.emailJobs.some(j => !!j.lastError);
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 dark:bg-slate-800">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recipient</th>
+                          <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Scheduled</th>
+                          <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sent</th>
+                          <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Attempts</th>
+                          {hasErrors && <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Error</th>}
+                          <th className="px-4 py-2.5 text-left text-[11px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
+                        {campaign.emailJobs.map((job) => (
+                          <tr key={job.id} className="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                            <td className="px-4 py-2.5 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-white">
+                              {job.recipientEmail}
+                            </td>
+                            <td className="px-4 py-2.5 whitespace-nowrap">
+                              <Badge variant={job.status.toLowerCase() as any}>
+                                {job.status}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                              {job.scheduledAt ? new Date(job.scheduledAt).toLocaleString() : '—'}
+                            </td>
+                            <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                              {job.sentAt ? new Date(job.sentAt).toLocaleString() : '—'}
+                            </td>
+                            <td className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 text-center">
+                              {job.attempts}
+                            </td>
+                            {hasErrors && (
+                              <td className="px-4 py-2.5 text-xs text-red-600 dark:text-red-400 max-w-xs truncate">
+                                {job.lastError ? (
+                                  <div className="flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">{job.lastError}</span>
+                                  </div>
+                                ) : '—'}
+                              </td>
+                            )}
+                            <td className="px-4 py-2.5 whitespace-nowrap text-xs">
+                              {job.previewUrl ? (
+                                <a
+                                  href={job.previewUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                  View Email
+                                </a>
+                              ) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
           </>
         )}
