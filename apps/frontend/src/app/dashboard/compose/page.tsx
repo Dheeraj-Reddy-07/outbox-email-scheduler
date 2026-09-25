@@ -200,8 +200,8 @@ export default function ComposePage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, senderEmail: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <option value="sender1">Sender 1 (sender1@outbox.com)</option>
-                  <option value="sender2">Sender 2 (sender2@outbox.com)</option>
+                  <option value="sender1">Primary (dheerajredddymagunta@gmail.com)</option>
+                  <option value="sender2">Secondary (dheerajredddymagunta+2@gmail.com)</option>
                 </select>
               </div>
 
