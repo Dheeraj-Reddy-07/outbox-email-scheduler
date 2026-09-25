@@ -234,14 +234,7 @@ export const createEmailWorker = (concurrency: number = 5) => {
     console.error('Worker error:', err);
   });
 
-  worker.on('delayed', (job) => {
-    console.log(`Job ${job.id} delayed`);
-  });
-  
-  worker.on('waiting', (job) => {
-    console.log(`Job ${job?.id} is waiting`);
-  });
-  
+
   // Check for delayed jobs on startup and promote past-due ones
   setTimeout(async () => {
     try {
