@@ -670,8 +670,8 @@ export default function ComposePage() {
           <div className="flex justify-end">
             <Button
               type="submit"
-              isLoading={loading}
-              disabled={!isValid}
+              isLoading={loading || uploadingAttachment}
+              disabled={!isValid || uploadingAttachment}
             >
               Schedule Campaign
             </Button>
