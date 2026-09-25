@@ -26,8 +26,8 @@ export async function createCampaignController(req: Request, res: Response) {
       return res.status(400).json({ error: 'Subject must be less than 255 characters' });
     }
 
-    if (body.length > 10000) {
-      return res.status(400).json({ error: 'Body must be less than 10000 characters' });
+    if (body.length > 500000) {
+      return res.status(400).json({ error: 'Body must be less than 500000 characters' });
     }
 
     const startDate = new Date(startAt);

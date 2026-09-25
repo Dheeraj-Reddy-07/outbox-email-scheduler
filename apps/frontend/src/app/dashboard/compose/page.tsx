@@ -391,7 +391,7 @@ export default function ComposePage() {
                 <RichTextEditor
                   value={formData.body}
                   onChange={(value) => setFormData(prev => ({ ...prev, body: value }))}
-                  maxLength={10000}
+                  maxLength={500000}
                   placeholder="Write your email content here..."
                 />
               </div>

@@ -17,7 +17,7 @@ const ALLOWED_ATTR = ['style', 'class'];
 export default function RichTextEditor({ 
   value, 
   onChange, 
-  maxLength = 10000,
+  maxLength = 500000,
   placeholder = 'Write your email content here...' 
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
